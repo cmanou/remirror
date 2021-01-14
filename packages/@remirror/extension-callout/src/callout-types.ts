@@ -14,6 +14,13 @@ export interface CalloutOptions {
    * @default 'info'
    */
   defaultType?: string;
+
+  /**
+   * List of supported callout types.
+   *
+   * @default ['info', 'warning', 'error', 'success']
+   */
+  supportedTypes?: string[];
 }
 
 export interface CalloutAttributes extends ProsemirrorAttributes {

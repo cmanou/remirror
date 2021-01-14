@@ -250,4 +250,82 @@ describe('plugin', () => {
       );
     });
   });
+
+  describe('Space', () => {
+    it('responds to space input rule', () => {
+      const errorCallout = callout({ type: 'error' });
+      const { state } = add(doc(p('<cursor>'))).insertText(':::error abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(errorCallout(p('abc'))));
+    });
+
+    it('responds to empty space input rule using the default type', () => {
+      const infoCallout = callout({ type: 'info' });
+      const { state } = add(doc(p('<cursor>'))).insertText('::: abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(infoCallout(p('abc'))));
+    });
+
+    it('does not match invalid regex', () => {
+      const { state } = add(doc(p('<cursor>'))).insertText(':::123-__ ');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(p(':::123-__ ')));
+    });
+
+    it('use default type for non supported type', () => {
+      const infoCallout = callout({ type: 'info' });
+      const { state } = add(doc(p('<cursor>'))).insertText(':::abcde abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(infoCallout(p('abc'))));
+    });
+
+    it('keeps alias type name when supported', () => {
+      const warningCallout = callout({ type: 'warning' });
+      const { state } = add(doc(p('<cursor>'))).insertText(':::warning abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(warningCallout(p('abc'))));
+    });
+  });
+
+  describe('Enter', () => {
+    it('responds to `Enter` key press', () => {
+      const errorCallout = callout({ type: 'error' });
+      const { state } = add(doc(p('<cursor>')))
+        .insertText(':::error')
+        .press('Enter')
+        .insertText('abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(errorCallout(p('abc'))));
+    });
+
+    it('uses default type when no type provided', () => {
+      const infoCallout = callout({ type: 'info' });
+      const { state } = add(doc(p('<cursor>')))
+        .insertText(':::')
+        .press('Enter')
+        .insertText('abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(infoCallout(p('abc'))));
+    });
+
+    it('uses default language when given an invalid language', () => {
+      const infoCallout = callout({ type: 'info' });
+      const { state } = add(doc(p('<cursor>')))
+        .insertText(':::invalid')
+        .press('Enter')
+        .insertText('abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(infoCallout(p('abc'))));
+    });
+
+    it('keeps alias type name when supported', () => {
+      const warningCallout = callout({ type: 'warning' });
+      const { state } = add(doc(p('<cursor>')))
+        .insertText(':::warning')
+        .press('Enter')
+        .insertText('abc');
+
+      expect(state.doc).toEqualRemirrorDocument(doc(warningCallout(p('abc'))));
+    });
+  });
 });

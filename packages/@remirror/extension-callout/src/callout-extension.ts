@@ -4,17 +4,23 @@ import {
   extensionDecorator,
   ExtensionTag,
   findNodeAtSelection,
+  GetAttributes,
+  getMatchString,
+  InputRule,
   isElementDomNode,
+  isTextSelection,
   KeyBindings,
   NodeExtension,
   NodeExtensionSpec,
+  nodeInputRule,
   omitExtraAttributes,
   toggleWrap,
 } from '@remirror/core';
+import { wrappingInputRule } from '@remirror/pm/inputrules';
 import { TextSelection } from '@remirror/pm/state';
 
 import type { CalloutAttributes, CalloutOptions } from './callout-types';
-import { dataAttributeType, updateNodeAttributes } from './callout-utils';
+import { dataAttributeType, getType, updateNodeAttributes } from './callout-utils';
 
 /**
  * Adds a callout to the editor.
@@ -22,6 +28,7 @@ import { dataAttributeType, updateNodeAttributes } from './callout-utils';
 @extensionDecorator<CalloutOptions>({
   defaultOptions: {
     defaultType: 'info',
+    supportedTypes: ['info', 'warning', 'error', 'success'],
   },
 })
 export class CalloutExtension extends NodeExtension<CalloutOptions> {
@@ -97,7 +104,37 @@ export class CalloutExtension extends NodeExtension<CalloutOptions> {
   }
 
   /**
-   * Create specific keyboard bindings for the code block.
+   * Create an input rule that converts text into a callout when typing triple
+   * collon followed by a space.
+   */
+  createInputRules(): InputRule[] {
+    return [
+      wrappingInputRule(
+        /^:::([\dA-Za-z]*) $/,
+        this.type,
+        (match) => {
+          const type = getType({
+            type: getMatchString(match, 1),
+            fallback: this.options.defaultType,
+            supportedTypes: this.options.supportedTypes,
+          });
+
+          return { type };
+        },
+        (match, node) => {
+          const type = getType({
+            type: getMatchString(match, 1),
+            fallback: this.options.defaultType,
+            supportedTypes: this.options.supportedTypes,
+          });
+          return node.attrs.type === type;
+        },
+      ),
+    ];
+  }
+
+  /**
+   * Create specific keyboard bindings for the callout.
    */
   createKeymap(): KeyBindings {
     return {
@@ -150,6 +187,54 @@ export class CalloutExtension extends NodeExtension<CalloutOptions> {
         }
 
         return false;
+      },
+      Enter: ({ dispatch, tr }) => {
+        const { selection } = tr;
+
+        if (!isTextSelection(selection) || !selection.$cursor) {
+          return false;
+        }
+
+        const { nodeBefore, parent } = selection.$from;
+
+        if (!nodeBefore || !nodeBefore.isText || !parent.type.isTextblock) {
+          return false;
+        }
+
+        const regex = /^:::([A-Za-z]*)?$/;
+        const { text } = nodeBefore;
+        const { textContent } = parent;
+
+        if (!text) {
+          return false;
+        }
+
+        const matchesNodeBefore = text.match(regex);
+        const matchesParent = textContent.match(regex);
+
+        if (!matchesNodeBefore || !matchesParent) {
+          return false;
+        }
+
+        const [, matchedType] = matchesNodeBefore;
+
+        const type = getType({
+          type: matchedType,
+          fallback: this.options.defaultType,
+          supportedTypes: this.options.supportedTypes,
+        });
+
+        const pos = selection.$from.before();
+        const end = pos + nodeBefore.nodeSize + 1; // +1 to account for the extra pos a node takes up
+
+        tr.delete(pos, end);
+        // TODO finish this
+
+        if (dispatch) {
+          dispatch(tr);
+        }
+
+        return true;
       },
     };
   }

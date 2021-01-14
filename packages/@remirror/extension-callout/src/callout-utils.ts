@@ -55,3 +55,39 @@ export function updateNodeAttributes(type: NodeType) {
     return true;
   };
 }
+
+interface GetTypeParameter {
+  /**
+   * The type input from the user;
+   */
+  type: string;
+
+  /**
+   * The default type to use if none found.
+   */
+  fallback: string;
+
+  /**
+   * The list of supported types, if not provided any type is allowed.
+   */
+  supportedTypes: string[];
+}
+
+/**
+ * Get the type from user input.
+ */
+export function getType(parameter: GetTypeParameter): string {
+  const { type, fallback, supportedTypes } = parameter;
+
+  if (!type) {
+    return fallback;
+  }
+
+  for (const name of supportedTypes) {
+    if (name.toLowerCase() === type.toLowerCase()) {
+      return name;
+    }
+  }
+
+  return fallback;
+}
